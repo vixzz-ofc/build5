@@ -1,0 +1,110 @@
+name: Web2APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      web_url:
+        description: 'URL Website'
+        required: true
+      app_name:
+        description: 'Nama Aplikasi'
+        required: true
+      icon_url:
+        description: 'Icon Url'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Create Flutter Project
+        run: |
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          PKG=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_')
+          flutter create --org com.webapk --project-name "$PKG" myapp
+
+      - name: Add Assets and Dependencies
+        run: |
+          cd myapp
+          flutter pub add webview_flutter
+          flutter pub add flutter_launcher_icons
+          flutter pub add connectivity_plus
+          mkdir -p assets/icon
+          printf '  assets:\n    - assets/icon/\n' >> pubspec.yaml
+
+      - name: Write main.dart
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          WEB_URL: ${{ github.event.inputs.web_url }}
+          DART_B64: >-
+            aW1wb3J0ICdwYWNrYWdlOmZsdXR0ZXIvbWF0ZXJpYWwuZGFydCc7CmltcG9ydCAncGFja2FnZTpmbHV0dGVyL3NlcnZpY2VzLmRhcnQnOwppbXBvcnQgJ3BhY2thZ2U6d2Vidmlld19mbHV0dGVyL3dlYnZpZXdfZmx1dHRlci5kYXJ0JzsKaW1wb3J0ICdwYWNrYWdlOmNvbm5lY3Rpdml0eV9wbHVzL2Nvbm5lY3Rpdml0eV9wbHVzLmRhcnQnOwppbXBvcnQgJ2RhcnQ6YXN5bmMnOwoKdm9pZCBtYWluKCkgewogIFdpZGdldHNGbHV0dGVyQmluZGluZy5lbnN1cmVJbml0aWFsaXplZCgpOwogIFN5c3RlbUNocm9tZS5zZXRTeXN0ZW1VSU92ZXJsYXlTdHlsZShjb25zdCBTeXN0ZW1VaU92ZXJsYXlTdHlsZSgKICAgIHN0YXR1c0JhckNvbG9yOiBDb2xvcnMudHJhbnNwYXJlbnQsCiAgICBzdGF0dXNCYXJJY29uQnJpZ2h0bmVzczogQnJpZ2h0bmVzcy5kYXJrLAogICkpOwogIHJ1bkFwcChjb25zdCBNeUFwcCgpKTsKfQoKY2xhc3MgTXlBcHAgZXh0ZW5kcyBTdGF0ZWxlc3NXaWRnZXQgewogIGNvbnN0IE15QXBwKHtzdXBlci5rZXl9KTsKICBAb3ZlcnJpZGUKICBXaWRnZXQgYnVpbGQoQnVpbGRDb250ZXh0IGNvbnRleHQpIHsKICAgIHJldHVybiBNYXRlcmlhbEFwcCgKICAgICAgdGl0bGU6ICdBUFBOQU1FJywKICAgICAgZGVidWdTaG93Q2hlY2tlZE1vZGVCYW5uZXI6IGZhbHNlLAogICAgICB0aGVtZTogVGhlbWVEYXRhKHVzZU1hdGVyaWFsMzogdHJ1ZSwgcHJpbWFyeVN3YXRjaDogQ29sb3JzLmJsdWUpLAogICAgICBob21lOiBjb25zdCBTcGxhc2hTY3JlZW4oKSwKICAgICk7CiAgfQp9CgpjbGFzcyBTcGxhc2hTY3JlZW4gZXh0ZW5kcyBTdGF0ZWZ1bFdpZGdldCB7CiAgY29uc3QgU3BsYXNoU2NyZWVuKHtzdXBlci5rZXl9KTsKICBAb3ZlcnJpZGUKICBTdGF0ZTxTcGxhc2hTY3JlZW4+IGNyZWF0ZVN0YXRlKCkgPT4gX1NwbGFzaFNjcmVlblN0YXRlKCk7Cn0KCmNsYXNzIF9TcGxhc2hTY3JlZW5TdGF0ZSBleHRlbmRzIFN0YXRlPFNwbGFzaFNjcmVlbj4KICAgIHdpdGggVGlja2VyUHJvdmlkZXJTdGF0ZU1peGluIHsKICBsYXRlIEFuaW1hdGlvbkNvbnRyb2xsZXIgX2ZhZGUsIF9zY2FsZSwgX2RvdDsKICBsYXRlIEFuaW1hdGlvbjxkb3VibGU+IF9mYWRlQSwgX3NjYWxlQSwgX2QxLCBfZDIsIF9kMzsKICBib29sIF9jaGVja2luZyA9IGZhbHNlLCBfZGxnID0gZmFsc2U7CgogIEFuaW1hdGlvbjxkb3VibGU+IF9zZXEoTGlzdDxMaXN0PGRvdWJsZT4+IHB0cykgewogICAgcmV0dXJuIFR3ZWVuU2VxdWVuY2UocHRzLm1hcCgocCkgPT4gVHdlZW5TZXF1ZW5jZUl0ZW0oCiAgICAgIHR3ZWVuOiBwWzBdID09IHBbMV0gPyBDb25zdGFudFR3ZWVuKHBbMF0pIDogVHdlZW4oYmVnaW46IHBbMF0sIGVuZDogcFsxXSksCiAgICAgIHdlaWdodDogMSwKICAgICkpLnRvTGlzdCgpKS5hbmltYXRlKEN1cnZlZEFuaW1hdGlvbihwYXJlbnQ6IF9kb3QsIGN1cnZlOiBDdXJ2ZXMuZWFzZUluT3V0KSk7CiAgfQoKICBAb3ZlcnJpZGUKICB2b2lkIGluaXRTdGF0ZSgpIHsKICAgIHN1cGVyLmluaXRTdGF0ZSgpOwogICAgX2ZhZGUgID0gQW5pbWF0aW9uQ29udHJvbGxlcih2c3luYzogdGhpcywgZHVyYXRpb246IGNvbnN0IER1cmF0aW9uKG1pbGxpc2Vjb25kczogODAwKSk7CiAgICBfc2NhbGUgPSBBbmltYXRpb25Db250cm9sbGVyKHZzeW5jOiB0aGlzLCBkdXJhdGlvbjogY29uc3QgRHVyYXRpb24obWlsbGlzZWNvbmRzOiA4MDApKTsKICAgIF9kb3QgICA9IEFuaW1hdGlvbkNvbnRyb2xsZXIodnN5bmM6IHRoaXMsIGR1cmF0aW9uOiBjb25zdCBEdXJhdGlvbihtaWxsaXNlY29uZHM6IDEyMDApKS4ucmVwZWF0KCk7CiAgICBfZmFkZUEgID0gVHdlZW4oYmVnaW46IDAuMCwgZW5kOiAxLjApLmFuaW1hdGUoQ3VydmVkQW5pbWF0aW9uKHBhcmVudDogX2ZhZGUsICBjdXJ2ZTogQ3VydmVzLmVhc2VPdXQpKTsKICAgIF9zY2FsZUEgPSBUd2VlbihiZWdpbjogMC43NSwgZW5kOiAxLjApLmFuaW1hdGUoQ3VydmVkQW5pbWF0aW9uKHBhcmVudDogX3NjYWxlLCBjdXJ2ZTogQ3VydmVzLmVhc2VPdXRCYWNrKSk7CiAgICBfZDEgPSBfc2VxKFtbMC4zLDEuMF0sWzEuMCwwLjNdLFswLjMsMC4zXV0pOwogICAgX2QyID0gX3NlcShbWzAuMywwLjNdLFswLjMsMS4wXSxbMS4wLDAuM11dKTsKICAgIF9kMyA9IF9zZXEoW1sxLjAsMC4zXSxbMC4zLDAuM10sWzAuMywxLjBdXSk7CiAgICBfZmFkZS5mb3J3YXJkKCk7IF9zY2FsZS5mb3J3YXJkKCk7CiAgICBUaW1lcihjb25zdCBEdXJhdGlvbihtaWxsaXNlY29uZHM6IDE1MDApLCBfZ28pOwogIH0KCiAgRnV0dXJlPHZvaWQ+IF9nbygpIGFzeW5jIHsKICAgIGlmIChfY2hlY2tpbmcpIHJldHVybjsKICAgIHNldFN0YXRlKCgpID0+IF9jaGVja2luZyA9IHRydWUpOwogICAgYXdhaXQgRnV0dXJlLmRlbGF5ZWQoY29uc3QgRHVyYXRpb24obWlsbGlzZWNvbmRzOiAxMDAwKSk7CiAgICBmaW5hbCByID0gYXdhaXQgQ29ubmVjdGl2aXR5KCkuY2hlY2tDb25uZWN0aXZpdHkoKTsKICAgIGlmIChyLmV2ZXJ5KCh4KSA9PiB4ID09IENvbm5lY3Rpdml0eVJlc3VsdC5ub25lKSkgewogICAgICBzZXRTdGF0ZSgoKSA9PiBfY2hlY2tpbmcgPSBmYWxzZSk7CiAgICAgIF9ub0Nvbm4oKTsKICAgIH0gZWxzZSBpZiAobW91bnRlZCkgewogICAgICBOYXZpZ2F0b3IucHVzaFJlcGxhY2VtZW50KGNvbnRleHQsIFBhZ2VSb3V0ZUJ1aWxkZXIoCiAgICAgICAgdHJhbnNpdGlvbkR1cmF0aW9uOiBjb25zdCBEdXJhdGlvbihtaWxsaXNlY29uZHM6IDUwMCksCiAgICAgICAgcGFnZUJ1aWxkZXI6IChfLCBfXywgX19fKSA9PiBjb25zdCBXZWJWaWV3UGFnZSgpLAogICAgICAgIHRyYW5zaXRpb25zQnVpbGRlcjogKF8sIGEsIF9fLCBjKSA9PiBGYWRlVHJhbnNpdGlvbihvcGFjaXR5OiBhLCBjaGlsZDogYyksCiAgICAgICkpOwogICAgfQogIH0KCiAgdm9pZCBfbm9Db25uKCkgewogICAgaWYgKCFtb3VudGVkIHx8IF9kbGcpIHJldHVybjsKICAgIHNldFN0YXRlKCgpID0+IF9kbGcgPSB0cnVlKTsKICAgIHNob3dEaWFsb2coY29udGV4dDogY29udGV4dCwgYmFycmllckRpc21pc3NpYmxlOiBmYWxzZSwgYnVpbGRlcjogKGN0eCkgPT4gQWxlcnREaWFsb2coCiAgICAgIHNoYXBlOiBSb3VuZGVkUmVjdGFuZ2xlQm9yZGVyKGJvcmRlclJhZGl1czogQm9yZGVyUmFkaXVzLmNpcmN1bGFyKDE2KSksCiAgICAgIHRpdGxlOiBjb25zdCBSb3coY2hpbGRyZW46IFtJY29uKEljb25zLndpZmlfb2ZmLCBjb2xvcjogQ29sb3JzLnJlZCksIFNpemVkQm94KHdpZHRoOiA4KSwgVGV4dCgnR2FnYWwgVGVyaHVidW5nJyldKSwKICAgICAgY29udGVudDogY29uc3QgVGV4dCgnVGlkYWsgYWRhIGtvbmVrc2kgaW50ZXJuZXQuIFBlcmlrc2EgamFyaW5nYW4ga2FtdSBkYW4gY29iYSBsYWdpLicpLAogICAgICBhY3Rpb25zOiBbVGV4dEJ1dHRvbihvblByZXNzZWQ6ICgpIHsgTmF2aWdhdG9yLnBvcChjdHgpOyBzZXRTdGF0ZSgoKSA9PiBfZGxnID0gZmFsc2UpOyBfZ28oKTsgfSwgY2hpbGQ6IGNvbnN0IFRleHQoJ0NvYmEgTGFnaScpKV0sCiAgICApKTsKICB9CgogIEBvdmVycmlkZQogIHZvaWQgZGlzcG9zZSgpIHsgX2ZhZGUuZGlzcG9zZSgpOyBfc2NhbGUuZGlzcG9zZSgpOyBfZG90LmRpc3Bvc2UoKTsgc3VwZXIuZGlzcG9zZSgpOyB9CgogIFdpZGdldCBfZG90XyhBbmltYXRpb248ZG91YmxlPiBhKSA9PiBBbmltYXRlZEJ1aWxkZXIoYW5pbWF0aW9uOiBhLCBidWlsZGVyOiAoXywgX18pID0+IE9wYWNpdHkoCiAgICBvcGFjaXR5OiBhLnZhbHVlLCBjaGlsZDogQ29udGFpbmVyKHdpZHRoOiA4LCBoZWlnaHQ6IDgsIGRlY29yYXRpb246IGNvbnN0IEJveERlY29yYXRpb24oY29sb3I6IENvbG9yKDB4RkY0QTkwRTIpLCBzaGFwZTogQm94U2hhcGUuY2lyY2xlKSkpKTsKCiAgQG92ZXJyaWRlCiAgV2lkZ2V0IGJ1aWxkKEJ1aWxkQ29udGV4dCBjKSB7CiAgICBmaW5hbCBzeiA9IE1lZGlhUXVlcnkub2YoYykuc2l6ZTsKICAgIHJldHVybiBTY2FmZm9sZChib2R5OiBDb250YWluZXIod2lkdGg6IHN6LndpZHRoLCBoZWlnaHQ6IHN6LmhlaWdodCwKICAgICAgZGVjb3JhdGlvbjogY29uc3QgQm94RGVjb3JhdGlvbihncmFkaWVudDogTGluZWFyR3JhZGllbnQoCiAgICAgICAgYmVnaW46IEFsaWdubWVudC50b3BMZWZ0LCBlbmQ6IEFsaWdubWVudC5ib3R0b21SaWdodCwKICAgICAgICBjb2xvcnM6IFtDb2xvcigweEZGZjBmNGZmKSwgQ29sb3IoMHhGRmU4ZjVlOSldKSksCiAgICAgIGNoaWxkOiBGYWRlVHJhbnNpdGlvbihvcGFjaXR5OiBfZmFkZUEsIGNoaWxkOiBDb2x1bW4obWFpbkF4aXNBbGlnbm1lbnQ6IE1haW5BeGlzQWxpZ25tZW50LmNlbnRlciwgY2hpbGRyZW46IFsKICAgICAgICBjb25zdCBTcGFjZXIoZmxleDogMyksCiAgICAgICAgU2NhbGVUcmFuc2l0aW9uKHNjYWxlOiBfc2NhbGVBLCBjaGlsZDogQ29udGFpbmVyKHdpZHRoOiAxNDAsIGhlaWdodDogMTQwLAogICAgICAgICAgZGVjb3JhdGlvbjogQm94RGVjb3JhdGlvbihib3JkZXJSYWRpdXM6IEJvcmRlclJhZGl1cy5jaXJjdWxhcigzMiksCiAgICAgICAgICAgIGJveFNoYWRvdzogW0JveFNoYWRvdyhjb2xvcjogQ29sb3JzLmJsYWNrLndpdGhPcGFjaXR5KDAuMTUpLCBibHVyUmFkaXVzOiAzMCwgb2Zmc2V0OiBjb25zdCBPZmZzZXQoMCwgMTApKV0pLAogICAgICAgICAgY2hpbGQ6IENsaXBSUmVjdChib3JkZXJSYWRpdXM6IEJvcmRlclJhZGl1cy5jaXJjdWxhcigzMiksCiAgICAgICAgICAgIGNoaWxkOiBJbWFnZS5hc3NldCgnYXNzZXRzL2ljb24vaWNvbi5wbmcnLCBmaXQ6IEJveEZpdC5jb3ZlciwKICAgICAgICAgICAgICBlcnJvckJ1aWxkZXI6IChfLCBfXywgX19fKSA9PiBjb25zdCBJY29uKEljb25zLmFuZHJvaWQsIHNpemU6IDgwLCBjb2xvcjogQ29sb3JzLmdyZWVuKSkpKSksCiAgICAgICAgY29uc3QgU2l6ZWRCb3goaGVpZ2h0OiAyOCksCiAgICAgICAgY29uc3QgVGV4dCgnQVBQTkFNRScsIHN0eWxlOiBUZXh0U3R5bGUoZm9udFNpemU6IDI2LCBmb250V2VpZ2h0OiBGb250V2VpZ2h0Lnc3MDAsIGNvbG9yOiBDb2xvcigweEZGMWExYTJlKSwgbGV0dGVyU3BhY2luZzogMC41KSksCiAgICAgICAgY29uc3QgU3BhY2VyKGZsZXg6IDMpLAogICAgICAgIFJvdyhtYWluQXhpc0FsaWdubWVudDogTWFpbkF4aXNBbGlnbm1lbnQuY2VudGVyLCBjaGlsZHJlbjogW19kb3RfKF9kMSksIGNvbnN0IFNpemVkQm94KHdpZHRoOiA4KSwgX2RvdF8oX2QyKSwgY29uc3QgU2l6ZWRCb3god2lkdGg6IDgpLCBfZG90XyhfZDMpXSksCiAgICAgICAgY29uc3QgU2l6ZWRCb3goaGVpZ2h0OiA0OCksCiAgICAgIF0pKSkpOwogIH0KfQoKY2xhc3MgV2ViVmlld1BhZ2UgZXh0ZW5kcyBTdGF0ZWZ1bFdpZGdldCB7CiAgY29uc3QgV2ViVmlld1BhZ2Uoe3N1cGVyLmtleX0pOwogIEBvdmVycmlkZQogIFN0YXRlPFdlYlZpZXdQYWdlPiBjcmVhdGVTdGF0ZSgpID0+IF9XZWJWaWV3UGFnZVN0YXRlKCk7Cn0KCmNsYXNzIF9XZWJWaWV3UGFnZVN0YXRlIGV4dGVuZHMgU3RhdGU8V2ViVmlld1BhZ2U+IHsKICBsYXRlIGZpbmFsIFdlYlZpZXdDb250cm9sbGVyIF9jdHJsOwogIGxhdGUgZmluYWwgQ29ubmVjdGl2aXR5IF9jb25uOwogIFN0cmVhbVN1YnNjcmlwdGlvbjxMaXN0PENvbm5lY3Rpdml0eVJlc3VsdD4+PyBfc3ViOwogIGJvb2wgX2RsZyA9IGZhbHNlOwoKICBAb3ZlcnJpZGUKICB2b2lkIGluaXRTdGF0ZSgpIHsKICAgIHN1cGVyLmluaXRTdGF0ZSgpOwogICAgX2Nvbm4gPSBDb25uZWN0aXZpdHkoKTsKICAgIF9jdHJsID0gV2ViVmlld0NvbnRyb2xsZXIoKQogICAgICAuLnNldEphdmFTY3JpcHRNb2RlKEphdmFTY3JpcHRNb2RlLnVucmVzdHJpY3RlZCkKICAgICAgLi5zZXRCYWNrZ3JvdW5kQ29sb3IoQ29sb3JzLndoaXRlKQogICAgICAuLnNldE5hdmlnYXRpb25EZWxlZ2F0ZShOYXZpZ2F0aW9uRGVsZWdhdGUoCiAgICAgICAgb25XZWJSZXNvdXJjZUVycm9yOiAoZSkgeyBpZiAoZS5pc0Zvck1haW5GcmFtZSA9PSB0cnVlKSBfbm9Db25uKCk7IH0sCiAgICAgICkpCiAgICAgIC4ubG9hZFJlcXVlc3QoVXJpLnBhcnNlKCdXRUJVUkwnKSk7CiAgICBfc3ViID0gX2Nvbm4ub25Db25uZWN0aXZpdHlDaGFuZ2VkLmxpc3RlbigocikgewogICAgICBpZiAoci5ldmVyeSgoeCkgPT4geCA9PSBDb25uZWN0aXZpdHlSZXN1bHQubm9uZSkpIF9ub0Nvbm4oKTsKICAgIH0pOwogIH0KCiAgQG92ZXJyaWRlCiAgdm9pZCBkaXNwb3NlKCkgeyBfc3ViPy5jYW5jZWwoKTsgc3VwZXIuZGlzcG9zZSgpOyB9CgogIHZvaWQgX25vQ29ubigpIHsKICAgIGlmICghbW91bnRlZCB8fCBfZGxnKSByZXR1cm47CiAgICBzZXRTdGF0ZSgoKSA9PiBfZGxnID0gdHJ1ZSk7CiAgICBzaG93RGlhbG9nKGNvbnRleHQ6IGNvbnRleHQsIGJhcnJpZXJEaXNtaXNzaWJsZTogZmFsc2UsIGJ1aWxkZXI6IChjdHgpID0+IEFsZXJ0RGlhbG9nKAogICAgICBzaGFwZTogUm91bmRlZFJlY3RhbmdsZUJvcmRlcihib3JkZXJSYWRpdXM6IEJvcmRlclJhZGl1cy5jaXJjdWxhcigxNikpLAogICAgICB0aXRsZTogY29uc3QgUm93KGNoaWxkcmVuOiBbSWNvbihJY29ucy53aWZpX29mZiwgY29sb3I6IENvbG9ycy5yZWQpLCBTaXplZEJveCh3aWR0aDogOCksIFRleHQoJ0dhZ2FsIFRlcmh1YnVuZycpXSksCiAgICAgIGNvbnRlbnQ6IGNvbnN0IFRleHQoJ1RpZGFrIGFkYSBrb25la3NpIGludGVybmV0LiBQZXJpa3NhIGphcmluZ2FuIGthbXUgZGFuIGNvYmEgbGFnaS4nKSwKICAgICAgYWN0aW9uczogW1RleHRCdXR0b24ob25QcmVzc2VkOiAoKSB7IE5hdmlnYXRvci5wb3AoY3R4KTsgc2V0U3RhdGUoKCkgPT4gX2RsZyA9IGZhbHNlKTsgX2N0cmwucmVsb2FkKCk7IH0sIGNoaWxkOiBjb25zdCBUZXh0KCdDb2JhIExhZ2knKSldLAogICAgKSk7CiAgfQoKICBAb3ZlcnJpZGUKICBXaWRnZXQgYnVpbGQoQnVpbGRDb250ZXh0IGMpIHsKICAgIHJldHVybiBQb3BTY29wZShjYW5Qb3A6IGZhbHNlLAogICAgICBvblBvcEludm9rZWQ6IChkKSBhc3luYyB7CiAgICAgICAgaWYgKGQpIHJldHVybjsKICAgICAgICBpZiAoYXdhaXQgX2N0cmwuY2FuR29CYWNrKCkpIGF3YWl0IF9jdHJsLmdvQmFjaygpOyBlbHNlIFN5c3RlbU5hdmlnYXRvci5wb3AoKTsKICAgICAgfSwKICAgICAgY2hpbGQ6IFNjYWZmb2xkKGJvZHk6IFNhZmVBcmVhKGNoaWxkOiBXZWJWaWV3V2lkZ2V0KGNvbnRyb2xsZXI6IF9jdHJsKSkpKTsKICB9Cn0K
+        run: |
+          echo "$DART_B64" | base64 -d > myapp/lib/main.dart
+          sed -i "s|APPNAME|$APP_NAME|g"  myapp/lib/main.dart
+          sed -i "s|WEBURL|$WEB_URL|g"    myapp/lib/main.dart
+          echo "main.dart written OK"
+
+      - name: Fix Android Permissions and App Name
+        run: |
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          MANIFEST="myapp/android/app/src/main/AndroidManifest.xml"
+          grep -q "INTERNET" "$MANIFEST" || \
+            sed -i '/<manifest xmlns:android/a\    <uses-permission android:name=\"android.permission.INTERNET\"\/>' "$MANIFEST"
+          grep -q "ACCESS_NETWORK_STATE" "$MANIFEST" || \
+            sed -i '/<manifest xmlns:android/a\    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"\/>' "$MANIFEST"
+          sed -i "s/android:label=\"[^\"]*\"/android:label=\"$APP_NAME\"/" "$MANIFEST"
+
+      - name: Setup Network Security
+        run: |
+          mkdir -p myapp/android/app/src/main/res/xml
+          printf '%s' '<?xml version="1.0" encoding="utf-8"?><network-security-config><base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system"/></trust-anchors></base-config></network-security-config>' \
+            > myapp/android/app/src/main/res/xml/network_security_config.xml
+          sed -i 's/<application/<application android:networkSecurityConfig=\"@xml\/network_security_config\"/' \
+            myapp/android/app/src/main/AndroidManifest.xml
+
+      - name: Download and Process Icon
+        run: |
+          mkdir -p myapp/assets/icon
+          sudo apt-get install -y imagemagick -q
+          curl -L -A "Mozilla/5.0" --max-redirs 10 \
+            "${{ github.event.inputs.icon_url }}" \
+            -o myapp/assets/icon/icon_raw
+          convert myapp/assets/icon/icon_raw \
+            -background white -alpha remove \
+            -gravity center -resize 1024x1024 -extent 1024x1024 \
+            PNG:myapp/assets/icon/icon.png
+          echo "Icon OK: $(wc -c < myapp/assets/icon/icon.png) bytes"
+
+      - name: Write launcher icons config
+        run: |
+          printf 'flutter_launcher_icons:\n  android: true\n  ios: false\n  image_path: "assets/icon/icon.png"\n  min_sdk_android: 21\n' \
+            > myapp/flutter_launcher_icons.yaml
+
+      - name: Generate Icons
+        run: |
+          cd myapp
+          dart run flutter_launcher_icons -f flutter_launcher_icons.yaml
+
+      - name: Build APK
+        run: |
+          cd myapp
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: web2apk-release
+          path: myapp/build/app/outputs/flutter-apk/app-release.apk
